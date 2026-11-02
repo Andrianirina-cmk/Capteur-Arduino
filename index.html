@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrôle Maison</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    min-height:100vh;
+    font-family: Arial, sans-serif;
+    background: radial-gradient(circle at 50% 30%, #2a2a2a, #0d0d0d);
+    color:#f5f5f5;
+    padding:30px 20px;
+  }
+
+  h1 {
+    text-align:center;
+    font-size:1.5rem;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    opacity:.85;
+    margin-bottom:30px;
+  }
+
+  h2 {
+    text-align:center;
+    font-size:1rem;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    opacity:.7;
+    margin:35px 0 20px;
+    border-bottom:1px solid rgba(255,255,255,.1);
+    padding-bottom:8px;
+    max-width:1100px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:20px;
+    max-width:1100px;
+    margin:0 auto;
+  }
+
+  .card {
+    background: linear-gradient(145deg,#1e1e1e,#141414);
+    border-radius:14px;
+    padding:20px 15px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.5),
+                inset 0 1px 0 rgba(255,255,255,.05);
+    transition: box-shadow .3s ease, transform .2s ease;
+  }
+  .card:hover { transform: translateY(-3px); }
+  .card.on {
+    box-shadow: 0 8px 20px rgba(0,0,0,.5),
+                0 0 25px rgba(255,235,120,.35),
+                inset 0 1px 0 rgba(255,255,255,.08);
+  }
+
+  .card .title {
+    font-size:.85rem;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    opacity:.7;
+    text-align:center;
+  }
+
+  .card .status {
+    font-size:.75rem;
+    padding:4px 12px;
+    border-radius:20px;
+    background:rgba(255,255,255,.08);
+    transition: background .3s ease, color .3s ease;
+  }
+  .card.on .status { background:rgba(120,255,120,.2); color:#b6ffb6; }
+
+  /* Interrupteur */
+  .switch {
+    position:relative;
+    display:inline-block;
+    width:60px; height:105px;
+    cursor:pointer;
+  }
+  .switch input { opacity:0; width:0; height:0; }
+  .plate {
+    position:absolute; inset:0;
+    background: linear-gradient(145deg,#e8e8e8,#c8c8c8);
+    border-radius:8px;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.9),
+                inset 0 -2px 4px rgba(0,0,0,.15),
+                0 6px 15px rgba(0,0,0,.4);
+    padding:8px;
+    transition: box-shadow .3s ease;
+  }
+  .slot {
+    position:relative; width:100%; height:100%;
+    background: linear-gradient(180deg,#7a7a7a,#9a9a9a 50%,#7a7a7a);
+    border-radius:4px;
+    box-shadow: inset 0 3px 6px rgba(0,0,0,.6),
+                inset 0 -2px 4px rgba(255,255,255,.2);
+    overflow:hidden;
+  }
+  .lever {
+    position:absolute; left:4px; right:4px; height:55%;
+    background: linear-gradient(180deg,#f5f5f5 0%,#d8d8d8 45%,#a8a8a8 100%);
+    border-radius:3px;
+    box-shadow: 0 3px 6px rgba(0,0,0,.5),
+                inset 0 1px 1px rgba(255,255,255,.9),
+                inset 0 -1px 2px rgba(0,0,0,.2);
+    top:45%;
+    transition: top .2s cubic-bezier(.4,0,.2,1), box-shadow .2s ease;
+  }
+  .switch input:checked ~ .plate .lever {
+    top:0%;
+    background: linear-gradient(180deg,#ffffff 0%,#e8e8e8 45%,#c0c0c0 100%);
+    box-shadow: 0 -2px 5px rgba(0,0,0,.4),
+                inset 0 1px 2px rgba(255,255,255,1),
+                inset 0 -1px 2px rgba(0,0,0,.15);
+  }
+  .switch input:checked ~ .plate {
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.9),
+                inset 0 -2px 4px rgba(0,0,0,.15),
+                0 6px 15px rgba(0,0,0,.4),
+                0 0 25px rgba(255,235,120,.5);
+  }
+  .switch input:focus-visible ~ .plate {
+    outline:3px solid #ffd93b;
+    outline-offset:4px;
+  }
+
+  /* Valeur capteur */
+  .value {
+    font-size:1.8rem;
+    font-weight:bold;
+    letter-spacing:1px;
+  }
+  .value small { font-size:.9rem; opacity:.6; font-weight:normal; }
+
+  .badge {
+    font-size:.75rem;
+    padding:5px 14px;
+    border-radius:20px;
+    background:rgba(255,255,255,.08);
+    letter-spacing:1px;
+    text-align:center;
+  }
+  .badge.ok { background:rgba(120,255,120,.2); color:#b6ffb6; }
+  .badge.warn { background:rgba(255,200,80,.2); color:#ffd98a; }
+  .badge.danger { background:rgba(255,90,90,.25); color:#ff9a9a; }
+
+  @media (max-width:480px) {
+    h1 { font-size:1.1rem; }
+    .grid { grid-template-columns:repeat(2,1fr); gap:12px; }
+    .card { padding:14px 10px; }
+    .switch { width:50px; height:90px; }
+    .value { font-size:1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Contrôle Maison</h1>
+
+<!-- ==================== LEDs ==================== -->
+<h2>Éclairage des pièces</h2>
+<div class="grid" id="ledGrid"></div>
+
+<!-- ==================== Capteurs ==================== -->
+<h2>Capteurs</h2>
+<div class="grid">
+  <!-- Température -->
+  <div class="card" id="cardTemp">
+    <div class="title">Température</div>
+    <div class="value"><span id="tempVal">--</span><small> °C</small></div>
+    <div class="badge" id="tempBadge">--</div>
+  </div>
+
+  <!-- Humidité air -->
+  <div class="card" id="cardHum">
+    <div class="title">Humidité air</div>
+    <div class="value"><span id="humVal">--</span><small> %</small></div>
+    <div class="badge" id="humBadge">--</div>
+  </div>
+
+  <!-- Flamme -->
+  <div class="card" id="cardFlame">
+    <div class="title">Flamme</div>
+    <div class="value" id="flameIcon">🔥</div>
+    <div class="badge" id="flameBadge">--</div>
+  </div>
+
+  <!-- Ultrason -->
+  <div class="card" id="cardUltra">
+    <div class="title">Présence porte</div>
+    <div class="value"><span id="ultraVal">--</span><small> cm</small></div>
+    <div class="badge" id="ultraBadge">--</div>
+  </div>
+
+  <!-- Humidité sol -->
+  <div class="card" id="cardSoil">
+    <div class="title">Humidité sol</div>
+    <div class="value"><span id="soilVal">--</span></div>
+    <div class="badge" id="soilBadge">--</div>
+  </div>
+</div>
+
+<script>
+  // ============================================
+  // LEDs (4 pièces)
+  // ============================================
+  const ROOMS = [
+    { id: 1, label: "Pièce 1" },
+    { id: 2, label: "Pièce 2" },
+    { id: 3, label: "Pièce 3" },
+    { id: 4, label: "Pièce 4" }
+  ];
+
+  const ledGrid = document.getElementById('ledGrid');
+
+  ROOMS.forEach(room => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = room.id;
+    card.innerHTML = `
+      <div class="title">${room.label}</div>
+      <label class="switch">
+        <input type="checkbox" data-id="${room.id}">
+        <span class="plate">
+          <span class="slot"><span class="lever"></span></span>
+        </span>
+      </label>
+      <div class="status">État : OFF</div>
+    `;
+    ledGrid.appendChild(card);
+  });
+
+  document.querySelectorAll('.switch input').forEach(input => {
+    input.addEventListener('change', () => {
+      const id = input.dataset.id;
+      const isOn = input.checked;
+      const url = `/led/${id}/${isOn ? 'on' : 'off'}`;
+      const card = input.closest('.card');
+      const status = card.querySelector('.status');
+
+      card.classList.toggle('on', isOn);
+      status.textContent = 'État : ' + (isOn ? 'ON' : 'OFF');
+
+      fetch(url).catch(err => {
+        console.error(err);
+        input.checked = !isOn;
+        card.classList.toggle('on', input.checked);
+        status.textContent = 'État : ' + (input.checked ? 'ON' : 'OFF');
+      });
+    });
+  });
+
+  // ============================================
+  // Récupération capteurs
+  // ============================================
+  async function updateDHT() {
+    try {
+      const r = await fetch('/api/dht');
+      const d = await r.json();
+      const t = d.temperature, h = d.humidity;
+      document.getElementById('tempVal').textContent = (t > -100) ? t.toFixed(1) : '--';
+      document.getElementById('humVal').textContent = (h > 0) ? h.toFixed(0) : '--';
+
+      const tB = document.getElementById('tempBadge');
+      if (t > -100) {
+        if (t < 18) { tB.textContent = 'Froid'; tB.className = 'badge warn'; }
+        else if (t > 28) { tB.textContent = 'Chaud'; tB.className = 'badge warn'; }
+        else { tB.textContent = 'Confortable'; tB.className = 'badge ok'; }
+      }
+      const hB = document.getElementById('humBadge');
+      if (h > 0) {
+        if (h < 30) { hB.textContent = 'Sec'; hB.className = 'badge warn'; }
+        else if (h > 70) { hB.textContent = 'Humide'; hB.className = 'badge warn'; }
+        else { hB.textContent = 'Normal'; hB.className = 'badge ok'; }
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  async function updateFlame() {
+    try {
+      const r = await fetch('/api/flame');
+      const d = await r.json();
+      const b = document.getElementById('flameBadge');
+      const c = document.getElementById('cardFlame');
+      if (d.flame) {
+        b.textContent = 'FLAMME !'; b.className = 'badge danger';
+        c.classList.add('on');
+        c.style.boxShadow = '0 8px 20px rgba(0,0,0,.5), 0 0 25px rgba(255,80,80,.6)';
+      } else {
+        b.textContent = 'Aucune'; b.className = 'badge ok';
+        c.classList.remove('on');
+        c.style.boxShadow = '';
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  async function updateUltra() {
+    try {
+      const r = await fetch('/api/ultrason');
+      const d = await r.json();
+      document.getElementById('ultraVal').textContent = (d.distance > 0) ? d.distance : '--';
+      const b = document.getElementById('ultraBadge');
+      if (d.presence) {
+        b.textContent = 'Personne près de la porte'; b.className = 'badge danger';
+      } else {
+        b.textContent = 'Libre'; b.className = 'badge ok';
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  async function updateSoil() {
+    try {
+      const r = await fetch('/api/soil');
+      const d = await r.json();
+      document.getElementById('soilVal').textContent = d.raw;
+      const b = document.getElementById('soilBadge');
+      if (d.etat === 'sec') { b.textContent = 'Sol sec'; b.className = 'badge danger'; }
+      else if (d.etat === 'humide') { b.textContent = 'Sol humide'; b.className = 'badge ok'; }
+      else { b.textContent = 'Très humide'; b.className = 'badge warn'; }
+    } catch(e) { console.error(e); }
+  }
+
+  // Boucle de rafraîchissement (toutes les 2 sec)
+  function refreshAll() {
+    updateDHT();
+    updateFlame();
+    updateUltra();
+    updateSoil();
+  }
+  refreshAll();
+  setInterval(refreshAll, 2000);
+</script>
+</body>
+</html>
